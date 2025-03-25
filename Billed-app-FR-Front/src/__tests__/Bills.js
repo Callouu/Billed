@@ -26,8 +26,11 @@ describe("Given I am connected as an employee", () => {
       await waitFor(() => screen.getByTestId('icon-window'))
       const windowIcon = screen.getByTestId('icon-window')
       //to-do write expect expression
+      const iconActivate = windowIcon.classList.contains("active-icon")
+      expect(iconActivate).toBeTruthy();
 
     })
+
     test("Then bills should be ordered from earliest to latest", () => {
       document.body.innerHTML = BillsUI({ data: bills })
       const dates = screen.getAllByText(/^(19|20)\d\d[- /.](0[1-9]|1[012])[- /.](0[1-9]|[12][0-9]|3[01])$/i).map(a => a.innerHTML)
@@ -35,5 +38,24 @@ describe("Given I am connected as an employee", () => {
       const datesSorted = [...dates].sort(antiChrono)
       expect(dates).toEqual(datesSorted)
     })
+
+    test("Then there should be 4 bills displayed on the dashboard", () => {
+      document.body.innerHTML = BillsUI({ data: bills });
+      const bill = screen.getAllByTestId("bill");
+      const type = screen.getAllByTestId("type");
+      const name = screen.getAllByTestId("name");
+      const date = screen.getAllByTestId("date");
+      const amount = screen.getAllByTestId("amount");
+      const status = screen.getAllByTestId("status");
+      const iconEye = screen.getAllByTestId("icon-eye");
+
+      expect(bill.length).toBe(4);
+      expect(type.length).toBe(4);
+      expect(name.length).toBe(4);
+      expect(date.length).toBe(4);
+      expect(amount.length).toBe(4);
+      expect(status.length).toBe(4);
+      expect(iconEye.length).toBe(4);
+    });
   })
 })
