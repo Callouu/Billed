@@ -228,3 +228,109 @@ describe("Given that I am a user on login page", () => {
     });
   });
 });
+
+describe("Given that I am a user on Login page", () => {
+  describe("When an error occurs with employee login", () => {
+    test("Then it should display an error message ", async () => {
+      document.body.innerHTML = LoginUI();
+      const inputData = {
+        email: "johndoe@email.com",
+        password: "azerty",
+      };
+
+      // Simule la saisie des champs
+      const inputEmailUser = screen.getByTestId("employee-email-input");
+      fireEvent.change(inputEmailUser, { target: { value: inputData.email } });
+      expect(inputEmailUser.value).toBe(inputData.email);
+
+      const inputPasswordUser = screen.getByTestId("employee-password-input");
+      fireEvent.change(inputPasswordUser, { target: { value: inputData.password } });
+      expect(inputPasswordUser.value).toBe(inputData.password);     
+      
+      const form = screen.getByTestId("form-employee");
+
+      Object.defineProperty(window, "localStorage", {
+        value: {
+          setItem: jest.fn(),
+        },
+        writable: true,
+      });
+
+      // Mock navigation
+      const onNavigate = jest.fn();
+
+      // Initialise Login
+      const login = new Login({
+        document,
+        localStorage: window.localStorage,
+        onNavigate,
+        store: null,
+      });
+
+      login.login = jest.fn().mockRejectedValue(new Error("login failed"));
+      const createUserSpy = jest.spyOn(login, "createUser");
+
+      // Simule la soumission du formulaire
+      await fireEvent.submit(form);
+
+      // Attendre que l'erreur soit capturée
+      await new Promise(process.nextTick);
+
+      // Vérifie que l'erreur est affichée dans la console
+      expect(createUserSpy).toHaveBeenCalled();
+      createUserSpy.mockRestore();
+    })
+  })
+
+  describe("When an error occurs with admin login", () => {
+    test("Then it should display an error message ", async () => {
+      document.body.innerHTML = LoginUI();
+      const inputData = {
+        email: "johndoe@email.com",
+        password: "azerty",
+      };
+
+      // Simule la saisie des champs
+      const inputEmailUser = screen.getByTestId("admin-email-input");
+      fireEvent.change(inputEmailUser, { target: { value: inputData.email } });
+      expect(inputEmailUser.value).toBe(inputData.email);
+
+      const inputPasswordUser = screen.getByTestId("admin-password-input");
+      fireEvent.change(inputPasswordUser, { target: { value: inputData.password } });
+      expect(inputPasswordUser.value).toBe(inputData.password);
+
+      const form = screen.getByTestId("form-admin");
+
+      Object.defineProperty(window, "localStorage", {
+        value: {
+          setItem: jest.fn(),
+        },
+        writable: true,
+      });
+
+      // Mock navigation
+      const onNavigate = jest.fn();
+
+      // Initialise Login
+      const login = new Login({
+        document,
+        localStorage: window.localStorage,
+        onNavigate,
+        store: null,
+      });
+
+      login.login = jest.fn().mockRejectedValue(new Error("login failed"));
+      const createUserSpy = jest.spyOn(login, "createUser");
+
+      // Simule la soumission du formulaire
+      await fireEvent.submit(form);
+
+      // Attendre que l'erreur soit capturée
+      await new Promise(process.nextTick);
+
+      // Vérifie que l'erreur est affichée dans la console
+      expect(createUserSpy).toHaveBeenCalled();
+      createUserSpy.mockRestore();
+    })
+  })
+})
