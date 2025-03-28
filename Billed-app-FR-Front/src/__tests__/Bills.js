@@ -2,12 +2,13 @@
  * @jest-environment jsdom
  */
 
-import {screen, waitFor, fireEvent} from "@testing-library/dom"
+import { screen, waitFor, fireEvent } from "@testing-library/dom"
 import BillsUI from "../views/BillsUI.js"
 import Bills from "../containers/Bills.js";
 import { bills } from "../fixtures/bills.js"
-import { ROUTES_PATH} from "../constants/routes.js";
-import {localStorageMock} from "../__mocks__/localStorage.js";
+import { ROUTES_PATH } from "../constants/routes.js";
+import { localStorageMock } from "../__mocks__/localStorage.js";
+import mockedStore from "../__mocks__/store.js";
 
 import router from "../app/Router.js";
 
@@ -88,7 +89,7 @@ describe("Given I am connected as an employee", () => {
       document.body.append(icon);
 
       $.fn.modal = jest.fn();
-    
+
       // Simulate the click event
       bills.handleClickIconEye(icon);
       const modalBody = document.querySelector("#modaleFile .modal-body");
@@ -98,11 +99,9 @@ describe("Given I am connected as an employee", () => {
       expect($.fn.modal).toHaveBeenCalledWith("show");
     })
   })
-})
 
-describe("Given I am connected as an employee", () => {
   describe("When I am on Bills Page and I click on New Bill", () => {
-    test ("Then I should be redirected to NewBill page", () => {
+    test("Then I should be redirected to NewBill page", () => {
       Object.defineProperty(window, 'localStorage', { value: localStorageMock })
       window.localStorage.setItem('user', JSON.stringify({
         type: 'Employee'
@@ -119,7 +118,7 @@ describe("Given I am connected as an employee", () => {
       const onNavigate = jest.fn((pathname) => {
         document.body.innerHTML = pathname;
       });
-      
+
       const bills = new Bills({
         document,
         onNavigate,
@@ -136,5 +135,58 @@ describe("Given I am connected as an employee", () => {
       expect(onNavigate).toHaveBeenCalledWith(ROUTES_PATH["NewBill"]);
     })
   })
-})
+
+  describe("When I call the getBills API", () =>  {
+    test("Then It should return a list of bills with dates and status", async () => {
+      Object.defineProperty(window, 'localStorage', { value: localStorageMock })
+      window.localStorage.setItem('user', JSON.stringify({
+        type: 'Employee'
+      }))
+
+      const onNavigate = jest.fn();
+      const bills = new Bills({
+        document,
+        onNavigate,
+        store: mockedStore,
+        localStorage: window.localStorage,
+      });
+
+      const result = await bills.getBills();
+
+      expect(result.length).toBe(4);
+      expect(result[0].status).toBe("En attente");
+      expect(result[0].date).toBe("4 Avr. 04");
+    })
+    test("Then It should return corrupted data with unformatted date", async () => {
+      Object.defineProperty(window, 'localStorage', { value: localStorageMock })
+      window.localStorage.setItem('user', JSON.stringify({
+        type: 'Employee'
+      }))
+      
+      const corruptedStore = {
+        bills() {
+          return {
+            list: () => 
+              Promise.resolve([
+              {id: "1", date: "invalid-date", status: "pending"},
+            ]),
+          };
+        },
+      };
+      const onNavigate = jest.fn();
+      const bills = new Bills({
+        document,
+        onNavigate,
+        store: corruptedStore,
+        localStorage: window.localStorage,
+      });
+
+      const result = await bills.getBills();
+
+      expect(result.length).toBe(1);
+      expect(result[0].date).toBe("invalid-date");
+      expect(result[0].status).toBe("En attente");
+    })
+  })
+}) 
 
