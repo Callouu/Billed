@@ -9,8 +9,7 @@ import { localStorageMock } from "../__mocks__/localStorage.js";
 import mockStore from "../__mocks__/store.js";
 import { ROUTES_PATH } from "../constants/routes.js";
 import router from "../app/Router.js";
-import BillsUI from "../views/BillsUI.js";
-
+import store from "../app/Store.js"
 
 describe("Given I am connected as an employee", () => {
   describe("When I am on NewBill Page", () => {
@@ -66,7 +65,7 @@ describe("Given I am on NewBill Page", () => {
     let newBill;
     beforeEach(() => {
       document.body.innerHTML = NewBillUI();
-
+      jest.spyOn(window, 'alert').mockImplementation(() => { });
       // localStorage
       Object.defineProperty(window, 'localStorage', { value: localStorageMock })
       window.localStorage.setItem('user', JSON.stringify({
@@ -96,15 +95,15 @@ describe("Given I am on NewBill Page", () => {
     });
 
     test("Then it should reject an invalid file (pdf)", async () => {
+
       const fileInput = screen.getByTestId("file");
       const invalidFile = new File(["file content"], "document.pdf", {
         type: "application/pdf",
       });
-      const alertMock = jest.spyOn(window, 'alert').mockImplementation(() => { });
 
       // Simulate file selection
       fireEvent.change(fileInput, { target: { files: [invalidFile] } });
-      expect(alertMock).toHaveBeenCalledWith(
+      expect(window.alert).toHaveBeenCalledWith(
         "Seuls les fichiers jpg, jpeg et png sont autorisés"
       );
       expect(fileInput.value).toBe("");
@@ -184,57 +183,59 @@ describe("Given I am on NewBill Page", () => {
     });
   })
 
-  describe("When I upload a file and an error occurs", () => {
-    test("Then it should log the error in the console", async () => {
-      // Mock le DOM
+  describe("When I submit a valid bill form", () => {
+    test('then a bill is created', async () => {
       document.body.innerHTML = NewBillUI();
 
-      // Mock localStorage
       Object.defineProperty(window, "localStorage", { value: localStorageMock });
       window.localStorage.setItem(
         "user",
         JSON.stringify({ email: "a@a" })
       );
 
-      // Mock store avec une erreur
-      const createMock = jest.fn().mockRejectedValue(new Error("Erreur API"));
+      const updateMock = jest.fn().mockResolvedValue({});
       mockStore.bills = jest.fn(() => ({
-        create: createMock,
+        update: updateMock,
       }));
 
-      // Mock console.error
-      const consoleErrorMock = jest.spyOn(console, "error").mockImplementation(() => { });
+      const onNavigate = jest.fn();
 
-      // Initialise NewBill
       const newBill = new NewBill({
         document,
-        onNavigate: jest.fn(),
+        onNavigate,
         store: mockStore,
         localStorage: window.localStorage,
       });
 
-      // Simule l'upload d'un fichier valide
-      const fileInput = screen.getByTestId("file");
-      const validFile = new File(["file content"], "image.jpg", {
-        type: "image/jpg",
-      });
-      fireEvent.change(fileInput, { target: { files: [validFile] } });
+      const submit = screen.getByTestId('form-new-bill');
 
-      await newBill.handleChangeFile({
-        preventDefault: jest.fn(),
-        target: {
-          files: [validFile],
-          value: 'image.jpg'
-        }
-      });
+      const validBill = {
+        name: "encore",
+        date: "2004-04-04",
+        type: "Services en ligne",
+        amount: 400,
+        pct: 20,
+        vat: "40",
+        commentary: 'séminaire billed',
+        fileName: "image.jpg",
+        fileUrl: "https://test.storage.tld/image.jpg"
+      }
 
-      // Vérifie que createMock a été appelé
-      await waitFor(() => expect(createMock).toHaveBeenCalled());
-      expect(consoleErrorMock).toHaveBeenCalledWith(new Error("Erreur API"));
-      // Nettoyage du mock
-      consoleErrorMock.mockRestore();
+      const handleSubmit = jest.fn((e) => newBill.handleSubmit(e));
+      document.querySelector(`input[data-testid="expense-name"]`).value = validBill.name;
+      document.querySelector(`input[data-testid="datepicker"]`).value = validBill.date;
+      document.querySelector(`select[data-testid="expense-type"]`).value = validBill.type;
+      document.querySelector(`input[data-testid="amount"]`).value = validBill.amount;
+      document.querySelector(`input[data-testid="vat"]`).value = validBill.vat;
+      document.querySelector(`input[data-testid="pct"]`).value = validBill.pct;
+      document.querySelector(`textarea[data-testid="commentary"]`).value = validBill.commentary;
+      newBill.fileUrl = validBill.fileUrl;
+      newBill.fileName = validBill.fileName;
+      submit.addEventListener('click', handleSubmit);
+      fireEvent.click(submit);
+      expect(handleSubmit).toHaveBeenCalledTimes(1);
     });
-  })
+  });
 })
 
 
