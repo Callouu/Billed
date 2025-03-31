@@ -9,8 +9,9 @@ import { bills } from "../fixtures/bills.js"
 import { ROUTES_PATH } from "../constants/routes.js";
 import { localStorageMock } from "../__mocks__/localStorage.js";
 import mockedStore from "../__mocks__/store.js";
-
 import router from "../app/Router.js";
+
+jest.mock("../app/store", () => mockedStore)
 
 describe("Given I am connected as an employee", () => {
   describe("When I am on Bills Page", () => {
@@ -71,6 +72,7 @@ describe("Given I am connected as an employee", () => {
 
       const modal = document.createElement("div");
       modal.setAttribute("id", "modaleFile");
+      modal.style.width = "800px";
       modal.innerHTML = `<div class="modal-body"></div>`;
       document.body.append(modal);
 
@@ -82,19 +84,21 @@ describe("Given I am connected as an employee", () => {
         localStorage: window.localStorage,
       });
 
-      // Create a mock icon element
       const icon = document.createElement("div");
       icon.setAttribute("data-testid", "icon-eye");
       icon.setAttribute("data-bill-url", "https://example.com/bill.jpg");
       document.body.append(icon);
 
+      jest.spyOn($.fn, "width").mockReturnValue(800);
+
       $.fn.modal = jest.fn();
 
-      // Simulate the click event
       bills.handleClickIconEye(icon);
+
+      const imgWidth = Math.floor(800 * 0.5);
       const modalBody = document.querySelector("#modaleFile .modal-body");
       expect(modalBody.innerHTML).toContain(
-        `<div style=\"text-align: center;\" class=\"bill-proof-container\"><img width=\"0\" src=\"https://example.com/bill.jpg\" alt=\"Bill\"></div>`
+        `<div style=\"text-align: center;\" class=\"bill-proof-container\"><img width="${imgWidth}" src=\"https://example.com/bill.jpg\" alt=\"Bill\"></div>`
       );
       expect($.fn.modal).toHaveBeenCalledWith("show");
     })
@@ -127,16 +131,17 @@ describe("Given I am connected as an employee", () => {
       });
 
       const newBillButton = screen.getByTestId("btn-new-bill");
-      const handleClickNewBill = jest.fn(bills.handleClickNewBill);
-      newBillButton.addEventListener("click", handleClickNewBill);
+      const clickEvent = new Event("click");
+      newBillButton.dispatchEvent(clickEvent);
+      newBillButton.addEventListener("click", bills.handleClickNewBill);
+      expect(newBillButton).toBeTruthy();
       fireEvent.click(newBillButton);
 
-      expect(handleClickNewBill).toHaveBeenCalled();
       expect(onNavigate).toHaveBeenCalledWith(ROUTES_PATH["NewBill"]);
     })
   })
 
-  describe("When I call the getBills API", () =>  {
+  describe("When I call the getBills API", () => {
     test("Then It should return a list of bills with dates and status", async () => {
       Object.defineProperty(window, 'localStorage', { value: localStorageMock })
       window.localStorage.setItem('user', JSON.stringify({
@@ -157,19 +162,20 @@ describe("Given I am connected as an employee", () => {
       expect(result[0].status).toBe("En attente");
       expect(result[0].date).toBe("4 Avr. 04");
     })
+
     test("Then It should return corrupted data with unformatted date", async () => {
       Object.defineProperty(window, 'localStorage', { value: localStorageMock })
       window.localStorage.setItem('user', JSON.stringify({
         type: 'Employee'
       }))
-      
+
       const corruptedStore = {
         bills() {
           return {
-            list: () => 
+            list: () =>
               Promise.resolve([
-              {id: "1", date: "invalid-date", status: "pending"},
-            ]),
+                { id: "1", date: "invalid-date", status: "pending" },
+              ]),
           };
         },
       };
@@ -187,6 +193,72 @@ describe("Given I am connected as an employee", () => {
       expect(result[0].date).toBe("invalid-date");
       expect(result[0].status).toBe("En attente");
     })
+  });
+})
+
+// test d'intégration GET
+describe("Given I am a user connected as Employee", () => {
+  describe("When I navigate to Bills", () => {
+    test("fetches bills from mock API GET", async () => {
+      document.body.innerHTML = BillsUI({ data: bills })
+      localStorage.setItem("user", JSON.stringify({ type: "Employee", email: "a@a" }));
+      const root = document.createElement("div")
+      root.setAttribute("id", "root")
+      document.body.append(root)
+      router()
+      window.onNavigate(ROUTES_PATH.Bills)
+      const showBills = await waitFor(() => screen.getByText("Mes notes de frais"))
+      expect(showBills).toBeTruthy()
+      const billsTableRows = screen.getAllByTestId("bill");
+      expect(billsTableRows.length).toBe(4);
+    });
+    describe("When an error occurs on API", () => {
+      beforeEach(() => {
+        jest.spyOn(mockedStore, "bills")
+        Object.defineProperty(
+          window,
+          'localStorage',
+          { value: localStorageMock }
+        )
+        window.localStorage.setItem('user', JSON.stringify({
+          type: 'Employee',
+          email: "a@a"
+        }))
+        const root = document.createElement("div")
+        root.setAttribute("id", "root")
+        document.body.appendChild(root)
+        router()
+      })
+      test("fetches bills from an API and fails with 404 message error", async () => {
+        mockedStore.bills.mockImplementationOnce(() => {
+          return {
+            list: () => {
+              return Promise.reject(new Error("Erreur 404"))
+            }
+          }
+        })
+        window.onNavigate(ROUTES_PATH.Bills)
+        await new Promise(process.nextTick);
+        const message = await screen.getByText(/Erreur 404/);
+        expect(message).toBeTruthy();
+      })
+
+      test("fetches messages from an API and fails with 500 message error", async () => {
+        mockedStore.bills.mockImplementationOnce(() => {
+          return {
+            list: () => {
+              return Promise.reject(new Error("Erreur 500"))
+            }
+          }
+        })
+
+        window.onNavigate(ROUTES_PATH.Bills)
+        await new Promise(process.nextTick);
+        const message = await screen.getByText(/Erreur 500/)
+        expect(message).toBeTruthy()
+      })
+    })
+
   })
-}) 
+})
 
