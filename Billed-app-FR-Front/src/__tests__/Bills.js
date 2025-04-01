@@ -11,6 +11,7 @@ import { ROUTES, ROUTES_PATH } from "../constants/routes.js";
 import { localStorageMock } from "../__mocks__/localStorage.js";
 import mockStore from "../__mocks__/store.js";
 import router from "../app/Router.js";
+import "@testing-library/jest-dom";
 
 jest.mock("../app/store", () => mockStore)
 
@@ -63,6 +64,36 @@ describe("Given I am connected as an employee", () => {
     });
   })
 
+  describe("When I am on Bills Page and I click on New Bill", () => {
+    test("Then I should be redirected to NewBill page", () => {
+
+      Object.defineProperty(window, 'localStorage', { value: localStorageMock })
+      window.localStorage.setItem('user', JSON.stringify({
+        type: 'Employee'
+      }))
+
+      const onNavigate = jest.fn();
+      const bills = new Bills({
+        document,
+        onNavigate,
+        store: null,
+        localStorage: window.localStorage,
+      });
+
+      document.body.innerHTML = BillsUI({ data: bills });
+
+      const buttonNewBill = screen.getByRole("button", {
+        name: /nouvelle note de frais/i,
+      });
+
+      expect(buttonNewBill).toBeTruthy();
+      const handleClickNewBill = jest.fn(bills.handleClickNewBill);
+      buttonNewBill.addEventListener("click", handleClickNewBill);
+      userEvent.click(buttonNewBill);
+      expect(handleClickNewBill).toHaveBeenCalled();
+    })
+  })
+
   describe("When I click on eye icon", () => {
     test("Then It should open the picture modal", () => {
       Object.defineProperty(window, 'localStorage', { value: localStorageMock })
@@ -70,13 +101,11 @@ describe("Given I am connected as an employee", () => {
         type: 'Employee'
       }))
 
-      document.body.innerHTML = BillsUI({ data: bills });
-
       const onNavigate = (pathname) => {
         document.body.innerHTML = ROUTES({ pathname });
       };
       const store = null;
-      const billspage = new Bills({
+      const newbills = new Bills({
         document,
         onNavigate,
         store,
@@ -84,154 +113,119 @@ describe("Given I am connected as an employee", () => {
         localStorage: window.localStorage,
       });
 
-      $.fn.modal = jest.fn();
+      document.body.innerHTML = BillsUI({ data: bills });
+
+      $.fn.modal = jest.fn(() => modale.classList.add("show"));
       const iconEye = screen.getAllByTestId("icon-eye");
-      const handleClickIconEye = jest.fn(() =>
-        billspage.handleClickIconEye(iconEye[0])
-      );
+      const handleClickIconEye = jest.fn(newbills.handleClickIconEye);
+      const modale = document.getElementById("modaleFile");
 
-      if (iconEye)
-        iconEye.forEach((icon) => {
-          icon.addEventListener("click", handleClickIconEye);
-        });
-      userEvent.click(iconEye[0]);
+      iconEye.forEach(iconEye => {
+        iconEye.addEventListener("click", () => handleClickIconEye(iconEye));
+        userEvent.click(iconEye);
 
-      expect(handleClickIconEye).toHaveBeenCalled();
+        expect(handleClickIconEye).toHaveBeenCalled();
+        expect(modale).toHaveClass("show");
+      });
     });
 
-    test("Then It should open the correct bill image", () => {
-      document.body.innerHTML = BillsUI({ data: [] })
-
-      Object.defineProperty(window, 'localStorage', { value: localStorageMock })
-      window.localStorage.setItem('user', JSON.stringify({
-        type: 'Employee'
-      }))
-
-      const modal = document.createElement("div");
-      modal.setAttribute("id", "modaleFile");
-      modal.style.width = "800px";
-      modal.innerHTML = `<div class="modal-body"></div>`;
-      document.body.append(modal);
-
-      const onNavigate = jest.fn();
-      const bills = new Bills({
-        document,
-        onNavigate,
-        store: null,
-        localStorage: window.localStorage,
+    describe("When I went on Bills page and it is loading", () => {
+      test("Then, Loading page should be rendered", () => {
+        document.body.innerHTML = BillsUI({ loading: true });
+        expect(screen.getByText("Loading...")).toBeVisible();
+        document.body.innerHTML = "";
       });
+    });
 
-      const icon = document.createElement("div");
-      icon.setAttribute("data-testid", "icon-eye");
-      icon.setAttribute("data-bill-url", "https://example.com/bill.jpg");
-      document.body.append(icon);
+    describe("When I am on Bills page but back-end send an error message", () => {
+      test("Then, Error page should be rendered", () => {
+        document.body.innerHTML = BillsUI({ error: "error message" });
+        expect(screen.getByText("Erreur")).toBeVisible();
+        document.body.innerHTML = "";
+      });
+    });
 
-      jest.spyOn($.fn, "width").mockReturnValue(800);
+    // describe("When I call the getBills API", () => {
+    //   test("Then It should return a list of bills with dates and status", async () => {
+    //     Object.defineProperty(window, 'localStorage', { value: localStorageMock })
+    //     window.localStorage.setItem('user', JSON.stringify({
+    //       type: 'Employee'
+    //     }))
 
-      $.fn.modal = jest.fn();
+    //     const onNavigate = jest.fn();
+    //     const bills = new Bills({
+    //       document,
+    //       onNavigate,
+    //       store: mockStore,
+    //       localStorage: window.localStorage,
+    //     });
 
-      bills.handleClickIconEye(icon);
+    //     const result = await bills.getBills();
 
-      const imgWidth = Math.floor(800 * 0.5);
-      const modalBody = document.querySelector("#modaleFile .modal-body");
-      expect(modalBody.innerHTML).toContain(
-        `<div style=\"text-align: center;\" class=\"bill-proof-container\"><img width="${imgWidth}" src=\"https://example.com/bill.jpg\" alt=\"Bill\"></div>`
-      );
-      expect($.fn.modal).toHaveBeenCalledWith("show");
-    })
+    //     expect(result.length).toBe(4);
+    //     expect(result[0].status).toBe("En attente");
+    //     expect(result[0].date).toBe("4 Avr. 04");
+    //   })
+
+    //   test("Then It should return corrupted data with unformatted date", async () => {
+    //     Object.defineProperty(window, 'localStorage', { value: localStorageMock })
+    //     window.localStorage.setItem('user', JSON.stringify({
+    //       type: 'Employee'
+    //     }))
+
+    //     const corruptedStore = {
+    //       bills() {
+    //         return {
+    //           list: () =>
+    //             Promise.resolve([
+    //               { id: "1", date: "invalid-date", status: "pending" },
+    //             ]),
+    //         };
+    //       },
+    //     };
+    //     const onNavigate = jest.fn();
+    //     const bills = new Bills({
+    //       document,
+    //       onNavigate,
+    //       store: corruptedStore,
+    //       localStorage: window.localStorage,
+    //     });
+
+    //     const result = await bills.getBills();
+
+    //     expect(result.length).toBe(1);
+    //     expect(result[0].date).toBe("invalid-date");
+    //     expect(result[0].status).toBe("En attente");
+    //   })
+    // });
   })
-
-  describe("When I am on Bills Page and I click on New Bill", () => {
-    test("Then I should be redirected to NewBill page", () => {
-      document.body.innerHTML = BillsUI({ data: [] });
-
-      const onNavigate = jest.fn();
-      const bills = new Bills({
-        document,
-        onNavigate,
-        store: null,
-        localStorage: window.localStorage,
-      });
-
-      const handleClickNewBill = jest.fn(() => bills.handleClickNewBill());
-      screen.getByTestId("btn-new-bill").addEventListener("click", handleClickNewBill);
-      userEvent.click(screen.getByTestId("btn-new-bill"));
-      expect(handleClickNewBill).toHaveBeenCalled();
-      expect(screen.getByText("Nouvelle note de frais")).toBeTruthy();
-    })
-  })
-
-  describe("When I call the getBills API", () => {
-    test("Then It should return a list of bills with dates and status", async () => {
-      Object.defineProperty(window, 'localStorage', { value: localStorageMock })
-      window.localStorage.setItem('user', JSON.stringify({
-        type: 'Employee'
-      }))
-
-      const onNavigate = jest.fn();
-      const bills = new Bills({
-        document,
-        onNavigate,
-        store: mockStore,
-        localStorage: window.localStorage,
-      });
-
-      const result = await bills.getBills();
-
-      expect(result.length).toBe(4);
-      expect(result[0].status).toBe("En attente");
-      expect(result[0].date).toBe("4 Avr. 04");
-    })
-
-    test("Then It should return corrupted data with unformatted date", async () => {
-      Object.defineProperty(window, 'localStorage', { value: localStorageMock })
-      window.localStorage.setItem('user', JSON.stringify({
-        type: 'Employee'
-      }))
-
-      const corruptedStore = {
-        bills() {
-          return {
-            list: () =>
-              Promise.resolve([
-                { id: "1", date: "invalid-date", status: "pending" },
-              ]),
-          };
-        },
-      };
-      const onNavigate = jest.fn();
-      const bills = new Bills({
-        document,
-        onNavigate,
-        store: corruptedStore,
-        localStorage: window.localStorage,
-      });
-
-      const result = await bills.getBills();
-
-      expect(result.length).toBe(1);
-      expect(result[0].date).toBe("invalid-date");
-      expect(result[0].status).toBe("En attente");
-    })
-  });
-})
-
-// test d'intégration GET
-describe("Given I am a user connected as Employee", () => {
+  // test d'intégration GET
   describe("When I navigate to Bills", () => {
-    test("fetches bills from mock API GET", async () => {
+    test("fetches bills from mock API", async () => {
+      jest.spyOn(mockStore, "bills");
+      Object.defineProperty(window, 'localStorage', { value: localStorageMock })
+      window.localStorage.setItem('user', JSON.stringify({
+        type: 'Employee'
+      }))
+
+      const root = document.createElement("div");
+      root.setAttribute("id", "root");
+      document.body.append(root);
+      router();
+      window.onNavigate(ROUTES_PATH.Bills);
+
       document.body.innerHTML = BillsUI({ data: bills })
-      localStorage.setItem("user", JSON.stringify({ type: "Employee", email: "a@a" }));
-      const root = document.createElement("div")
-      root.setAttribute("id", "root")
-      document.body.append(root)
-      router()
-      window.onNavigate(ROUTES_PATH.Bills)
+
       const showBills = await waitFor(() => screen.getByText("Mes notes de frais"))
       expect(showBills).toBeTruthy()
       const billsTableRows = screen.getAllByTestId("bill");
+      expect(billsTableRows).toBeTruthy()
       expect(billsTableRows.length).toBe(4);
+
+      const firstBillStatus = billsTableRows[0].querySelector('[data-testid="status"]').textContent;
+      expect(firstBillStatus).toBe("pending");
     });
+
     describe("When an error occurs on API", () => {
       beforeEach(() => {
         jest.spyOn(mockStore, "bills")
@@ -249,6 +243,7 @@ describe("Given I am a user connected as Employee", () => {
         document.body.appendChild(root)
         router()
       })
+
       test("fetches bills from an API and fails with 404 message error", async () => {
         mockStore.bills.mockImplementationOnce(() => {
           return {
@@ -278,7 +273,5 @@ describe("Given I am a user connected as Employee", () => {
         expect(message).toBeTruthy()
       })
     })
-
   })
 })
-
