@@ -71,7 +71,10 @@ describe("Given I am connected as an employee", () => {
         type: 'Employee'
       }))
 
-      const onNavigate = jest.fn();
+      const onNavigate = (pathname) => {
+        document.body.innerHTML = ROUTES({ pathname });
+      };
+      
       const bills = new Bills({
         document,
         onNavigate,
