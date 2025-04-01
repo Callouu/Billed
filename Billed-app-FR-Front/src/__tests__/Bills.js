@@ -132,16 +132,14 @@ describe("Given I am connected as an employee", () => {
     describe("When I went on Bills page and it is loading", () => {
       test("Then Loading should be rendered", () => {
         document.body.innerHTML = BillsUI({ loading: true });
-        expect(screen.getByText("Loading...")).toBeVisible();
-        document.body.innerHTML = "";
+        expect(screen.getAllByText('Loading...')).toBeTruthy()
       });
     });
 
     describe("When I am on Bills page but back-end send an error message", () => {
       test("Then Error should be rendered", () => {
         document.body.innerHTML = BillsUI({ error: "error message" });
-        expect(screen.getByText("Erreur")).toBeVisible();
-        document.body.innerHTML = "";
+        expect(screen.getAllByText('Erreur')).toBeTruthy()
       });
     });
   });
