@@ -18,7 +18,6 @@ jest.mock("../app/store", () => mockStore)
 describe("Given I am connected as an employee", () => {
   describe("When I am on Bills Page", () => {
     test("Then bill icon in vertical layout should be highlighted", async () => {
-
       Object.defineProperty(window, 'localStorage', { value: localStorageMock })
       window.localStorage.setItem('user', JSON.stringify({
         type: 'Employee'
@@ -104,6 +103,7 @@ describe("Given I am connected as an employee", () => {
       const onNavigate = (pathname) => {
         document.body.innerHTML = ROUTES({ pathname });
       };
+      
       const store = null;
       const newbills = new Bills({
         document,
@@ -115,22 +115,22 @@ describe("Given I am connected as an employee", () => {
 
       document.body.innerHTML = BillsUI({ data: bills });
 
-      $.fn.modal = jest.fn(() => modale.classList.add("show"));
-      const iconEye = screen.getAllByTestId("icon-eye");
+      const imgModal = document.getElementById("modaleFile");
+      $.fn.modal = jest.fn(() => imgModal.classList.add("show"));
+      const iconsEye = screen.getAllByTestId("icon-eye");
       const handleClickIconEye = jest.fn(newbills.handleClickIconEye);
-      const modale = document.getElementById("modaleFile");
 
-      iconEye.forEach(iconEye => {
+      iconsEye.forEach(iconEye => {
         iconEye.addEventListener("click", () => handleClickIconEye(iconEye));
         userEvent.click(iconEye);
 
         expect(handleClickIconEye).toHaveBeenCalled();
-        expect(modale).toHaveClass("show");
+        expect(imgModal).toHaveClass("show");
       });
     });
 
     describe("When I went on Bills page and it is loading", () => {
-      test("Then, Loading page should be rendered", () => {
+      test("Then Loading should be rendered", () => {
         document.body.innerHTML = BillsUI({ loading: true });
         expect(screen.getByText("Loading...")).toBeVisible();
         document.body.innerHTML = "";
@@ -138,67 +138,14 @@ describe("Given I am connected as an employee", () => {
     });
 
     describe("When I am on Bills page but back-end send an error message", () => {
-      test("Then, Error page should be rendered", () => {
+      test("Then Error should be rendered", () => {
         document.body.innerHTML = BillsUI({ error: "error message" });
         expect(screen.getByText("Erreur")).toBeVisible();
         document.body.innerHTML = "";
       });
     });
+  });
 
-    // describe("When I call the getBills API", () => {
-    //   test("Then It should return a list of bills with dates and status", async () => {
-    //     Object.defineProperty(window, 'localStorage', { value: localStorageMock })
-    //     window.localStorage.setItem('user', JSON.stringify({
-    //       type: 'Employee'
-    //     }))
-
-    //     const onNavigate = jest.fn();
-    //     const bills = new Bills({
-    //       document,
-    //       onNavigate,
-    //       store: mockStore,
-    //       localStorage: window.localStorage,
-    //     });
-
-    //     const result = await bills.getBills();
-
-    //     expect(result.length).toBe(4);
-    //     expect(result[0].status).toBe("En attente");
-    //     expect(result[0].date).toBe("4 Avr. 04");
-    //   })
-
-    //   test("Then It should return corrupted data with unformatted date", async () => {
-    //     Object.defineProperty(window, 'localStorage', { value: localStorageMock })
-    //     window.localStorage.setItem('user', JSON.stringify({
-    //       type: 'Employee'
-    //     }))
-
-    //     const corruptedStore = {
-    //       bills() {
-    //         return {
-    //           list: () =>
-    //             Promise.resolve([
-    //               { id: "1", date: "invalid-date", status: "pending" },
-    //             ]),
-    //         };
-    //       },
-    //     };
-    //     const onNavigate = jest.fn();
-    //     const bills = new Bills({
-    //       document,
-    //       onNavigate,
-    //       store: corruptedStore,
-    //       localStorage: window.localStorage,
-    //     });
-
-    //     const result = await bills.getBills();
-
-    //     expect(result.length).toBe(1);
-    //     expect(result[0].date).toBe("invalid-date");
-    //     expect(result[0].status).toBe("En attente");
-    //   })
-    // });
-  })
   // test d'intégration GET
   describe("When I navigate to Bills", () => {
     test("fetches bills from mock API", async () => {

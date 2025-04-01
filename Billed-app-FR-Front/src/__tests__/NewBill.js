@@ -128,55 +128,53 @@ describe("Given I am on NewBill Page", () => {
     })
   })
 
-  describe("When I upload a valid File", () => {
-    test("Then it should call store.bills with correct data", async () => {
-      document.body.innerHTML = NewBillUI();
+  test("Then it should export file with correct data", async () => {
+    document.body.innerHTML = NewBillUI();
 
-      Object.defineProperty(window, "localStorage", { value: localStorageMock });
-      window.localStorage.setItem("user", JSON.stringify({
-        type: 'Employee',
-        email: "a@a"
-      })
-      );
+    Object.defineProperty(window, "localStorage", { value: localStorageMock });
+    window.localStorage.setItem("user", JSON.stringify({
+      type: 'Employee',
+      email: "a@a"
+    })
+    );
 
-      const createMock = jest.fn().mockResolvedValue({
-        fileUrl: "https://example.com/file.jpg",
-        key: "123",
-      });
-      mockStore.bills = jest.fn(() => ({
-        create: createMock,
-      }));
-
-      const newBill = new NewBill({
-        document,
-        onNavigate: jest.fn(),
-        store: mockStore,
-        localStorage: window.localStorage,
-      });
-
-      const fileInput = screen.getByTestId("file");
-      const validFile = new File(["file content"], "image.jpg", {
-        type: "image/jpg",
-      });
-      fireEvent.change(fileInput, { target: { files: [validFile] } });
-
-      await newBill.handleChangeFile({
-        preventDefault: jest.fn(),
-        target: {
-          files: [validFile],
-          value: 'image.jpg'
-        }
-      });
-
-      await waitFor(() => expect(createMock).toHaveBeenCalled());
-      expect(createMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.any(FormData),
-          headers: { noContentType: true },
-        })
-      );
+    const createMock = jest.fn().mockResolvedValue({
+      fileUrl: "https://example.com/file.jpg",
+      key: "123",
     });
-  })
+    mockStore.bills = jest.fn(() => ({
+      create: createMock,
+    }));
+
+    const newBill = new NewBill({
+      document,
+      onNavigate: jest.fn(),
+      store: mockStore,
+      localStorage: window.localStorage,
+    });
+
+    const fileInput = screen.getByTestId("file");
+    const validFile = new File(["file content"], "image.jpg", {
+      type: "image/jpg",
+    });
+    fireEvent.change(fileInput, { target: { files: [validFile] } });
+
+    await newBill.handleChangeFile({
+      preventDefault: jest.fn(),
+      target: {
+        files: [validFile],
+        value: 'image.jpg'
+      }
+    });
+
+    await waitFor(() => expect(createMock).toHaveBeenCalled());
+    expect(createMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.any(FormData),
+        headers: { noContentType: true },
+      })
+    );
+  });
 
   describe("When I submit a valid bill form", () => {
     test('then a bill is created', async () => {
@@ -264,6 +262,7 @@ describe("Given I am a user connected as Employee", () => {
       expect(postBills).toStrictEqual(bill);
     })
   })
+
   describe("When an error occurs on API", () => {
     beforeEach(() => {
       document.body.innerHTML = NewBillUI();
@@ -296,7 +295,7 @@ describe("Given I am a user connected as Employee", () => {
       const handleSubmit = jest.fn((e) => newBill.handleSubmit(e));
       form.addEventListener("submit", handleSubmit);
       fireEvent.submit(form);
-      
+
       await waitFor(() => {
         expect(storeSpy).toHaveBeenCalledWith(new Error("404"));
       });
@@ -323,7 +322,7 @@ describe("Given I am a user connected as Employee", () => {
       const handleSubmit = jest.fn((e) => newBill.handleSubmit(e));
       form.addEventListener("submit", handleSubmit);
       fireEvent.submit(form);
-      
+
       await waitFor(() => {
         expect(storeSpy).toHaveBeenCalledWith(new Error("500"));
       });
