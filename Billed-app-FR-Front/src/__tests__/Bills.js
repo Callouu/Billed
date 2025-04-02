@@ -63,6 +63,37 @@ describe("Given I am connected as an employee", () => {
     });
   })
 
+  test("Then first bill should contain the correct data", () => {
+    document.body.innerHTML = BillsUI({ data: bills });
+    const type = screen.getAllByTestId("type")[0];
+    const name = screen.getAllByTestId("name")[0];
+    const date = screen.getAllByTestId("date")[0];
+    const amount = screen.getAllByTestId("amount")[0];
+    const status = screen.getAllByTestId("status")[0];
+    const iconEye = screen.getAllByTestId("icon-eye")[0];
+
+    expect(type.textContent).toBe("Hôtel et logement");
+    expect(name.textContent).toBe("encore");
+    expect(date.textContent).toBe("2004-04-04");
+    expect(amount.textContent).toBe("400 €");
+    expect(status.textContent).toBe("pending");
+    expect(iconEye.textContent).toBeTruthy();
+  });
+
+  describe("When I went on Bills page and it is loading", () => {
+    test("Then Loading should be rendered", () => {
+      document.body.innerHTML = BillsUI({ loading: true });
+      expect(screen.getAllByText('Loading...')).toBeTruthy()
+    });
+  });
+
+  describe("When I am on Bills page but back-end send an error message", () => {
+    test("Then Error should be rendered", () => {
+      document.body.innerHTML = BillsUI({ error: "error message" });
+      expect(screen.getAllByText('Erreur')).toBeTruthy()
+    });
+  });
+
   describe("When I am on Bills Page and I click on New Bill", () => {
     test("Then I should be redirected to NewBill page", () => {
 
@@ -74,7 +105,7 @@ describe("Given I am connected as an employee", () => {
       const onNavigate = (pathname) => {
         document.body.innerHTML = ROUTES({ pathname });
       };
-      
+
       const bills = new Bills({
         document,
         onNavigate,
@@ -106,7 +137,7 @@ describe("Given I am connected as an employee", () => {
       const onNavigate = (pathname) => {
         document.body.innerHTML = ROUTES({ pathname });
       };
-      
+
       const store = null;
       const newbills = new Bills({
         document,
@@ -129,20 +160,6 @@ describe("Given I am connected as an employee", () => {
 
         expect(handleClickIconEye).toHaveBeenCalled();
         expect(imgModal).toHaveClass("show");
-      });
-    });
-
-    describe("When I went on Bills page and it is loading", () => {
-      test("Then Loading should be rendered", () => {
-        document.body.innerHTML = BillsUI({ loading: true });
-        expect(screen.getAllByText('Loading...')).toBeTruthy()
-      });
-    });
-
-    describe("When I am on Bills page but back-end send an error message", () => {
-      test("Then Error should be rendered", () => {
-        document.body.innerHTML = BillsUI({ error: "error message" });
-        expect(screen.getAllByText('Erreur')).toBeTruthy()
       });
     });
   });
